@@ -136,27 +136,38 @@
      (and (member method '("sftp" "fcp"))
           "sshx"))))
 
+(defun su--check-passwordless-sudo ()
+  (let (process-file-side-effects)
+    (= (process-file "sudo" nil nil nil "-n" "true") 0)))
+
+(defun su--check-password-sudo ()
+  (let ((prompt "emacs-su-prompt")
+        process-file-side-effects)
+    (string-match-p
+     prompt
+     (with-output-to-string
+       (with-current-buffer standard-output
+         (process-file "sudo" nil t nil "-vSp" prompt))))))
+
+(defun su--check-sudo ()
+  (or (su--check-passwordless-sudo)
+      (su--check-password-sudo)))
+
 (defun su--make-root-file-name (file-name &optional user)
   (require 'tramp)
   (let* ((target-user (or user "root"))
          (abs-file-name (expand-file-name file-name))
          (sudo (with-demoted-errors "sudo check failed: %s"
                  (let ((default-directory
-                         (my/file-name-first-existing-parent abs-file-name))
-                       (process-file-side-effects nil))
-                   (or (= (process-file "sudo" nil nil nil "-n" "true") 0)
-                       ;; Detect if sudo can be run with a password
-                       (string-match-p
-                        (rx (or "askpass" "password"))
-                        (with-output-to-string
-                          (with-current-buffer standard-output
-                            (process-file "sudo" nil t nil "-vS")))))))))
+                         (my/file-name-first-existing-parent abs-file-name)))
+                   (su--check-sudo))))
+         (su-method (if sudo "sudo" "su")))
     (if (tramp-tramp-file-p abs-file-name)
         (with-parsed-tramp-file-name abs-file-name parsed
           (if (string= parsed-user target-user)
               abs-file-name
             (tramp-make-tramp-file-name
-             (if sudo "sudo" "su")
+             su-method
              target-user
              nil
              parsed-host
@@ -174,7 +185,7 @@
                 parsed-hop)))))
       (if (string= (user-login-name) user)
           abs-file-name
-        (tramp-make-tramp-file-name (if sudo "sudo" "su")
+        (tramp-make-tramp-file-name su-method
                                     target-user
                                     nil
                                     "localhost"
@@ -222,7 +233,7 @@
   "Switch the visiting file to a TRAMP su or sudo name if applicable"
   (when (and (buffer-modified-p)
              (not (su--root-file-name-p buffer-file-name))
-             (or (not (= (process-file "sudo" nil nil nil "-n" "true") 0))
+             (or (not (su--check-passwordless-sudo))
                  (yes-or-no-p "File is not writable. Save with root? ")))
     (let ((change-major-mode-with-file-name nil))
       (set-visited-file-name (su--make-root-file-name buffer-file-name) t t))
@@ -250,6 +261,7 @@
     
     (setq buffer-read-only nil)
     (add-hook 'first-change-hook #'su-auto-save-mode nil t)
+
     ;; This is kind of a hack, since I can't guarantee that this
     ;; message will be displayed last, so I just display it with a
     ;; delay.
