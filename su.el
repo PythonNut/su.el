@@ -42,7 +42,7 @@
 
 (defgroup su nil
   "Automatically read and write files as users"
-  :group 'convenience 'tramp
+  :group 'convenience
   :prefix "su-")
 
 (defcustom su-auto-make-directory t
