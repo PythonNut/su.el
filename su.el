@@ -38,7 +38,8 @@
 ;;; Code:
 (eval-when-compile
   (with-demoted-errors "Byte-compile: %s"
-    (require 'tramp)))
+    (require 'tramp)
+    (require 'nadvice)))
 
 (defgroup su nil
   "Automatically read and write files as users"
@@ -180,11 +181,6 @@
                                     nil
                                     abs-file-name)))))
 
-(defun su ()
-  "Find file as root"
-  (interactive)
-  (find-alternate-file (su--make-root-file-name buffer-file-name)))
-
 (defun su--nadvice-find-file-noselect-1 (old-fun buf filename &rest args)
   (condition-case err
       (apply old-fun buf filename args)
@@ -259,6 +255,13 @@
     ;; delay.
     (run-with-idle-timer 0.5 nil #'su--edit-file-as-root-maybe)))
 
+;;;###autoload
+(defun su ()
+  "Find file as root"
+  (interactive)
+  (find-alternate-file (su--make-root-file-name buffer-file-name)))
+
+;;;###autoload
 (define-minor-mode su-auto-save-mode
   "Automatically save buffer as root"
   :lighter su-auto-save-mode-lighter
@@ -274,6 +277,7 @@
         (add-hook 'before-save-hook #'su--before-save-hook nil t))
     (remove-hook 'before-save-hook #'su--before-save-hook t)))
 
+;;;###autoload
 (define-minor-mode su-mode
   "Automatically read and write files as users"
   :init-value nil
