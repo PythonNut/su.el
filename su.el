@@ -136,22 +136,39 @@
      (and (member method '("sftp" "fcp"))
           "sshx"))))
 
-(defun su--check-passwordless-sudo ()
+(defun su--check-passwordless-sudo (&optional user)
   (let (process-file-side-effects)
-    (= (process-file "sudo" nil nil nil "-n" "true") 0)))
+    (= (apply #'process-file
+              "sudo"
+              nil
+              nil
+              nil
+              "-n"
+              "true"
+              (when user
+                (list "-u" user)))
+       0)))
 
-(defun su--check-password-sudo ()
+(defun su--check-password-sudo (&optional user)
   (let ((prompt "emacs-su-prompt")
         process-file-side-effects)
     (string-match-p
      prompt
      (with-output-to-string
        (with-current-buffer standard-output
-         (process-file "sudo" nil t nil "-vSp" prompt))))))
+         (apply #'process-file
+                "sudo"
+                nil
+                t
+                nil
+                "-vSp"
+                prompt
+                (when user
+                  (list "-u" user))))))))
 
-(defun su--check-sudo ()
-  (or (su--check-passwordless-sudo)
-      (su--check-password-sudo)))
+(defun su--check-sudo (&optional user)
+  (or (su--check-passwordless-sudo user)
+      (su--check-password-sudo user)))
 
 (defun su--make-root-file-name (file-name &optional user)
   (require 'tramp)
@@ -160,7 +177,7 @@
          (sudo (with-demoted-errors "sudo check failed: %s"
                  (let ((default-directory
                          (my/file-name-first-existing-parent abs-file-name)))
-                   (su--check-sudo))))
+                   (su--check-sudo user))))
          (su-method (if sudo "sudo" "su")))
     (if (tramp-tramp-file-p abs-file-name)
         (with-parsed-tramp-file-name abs-file-name parsed
