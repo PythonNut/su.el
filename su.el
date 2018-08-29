@@ -70,6 +70,15 @@
   :type 'boolean
   :group 'su)
 
+(defcustom su-auto-save-mode-lighter
+  (list " " (propertize "root" 'face 'tty-menu-selected-face))
+  "The mode line lighter for su-auto-save-mode."
+  :type 'list
+  :group 'su)
+
+;; Required for the face to be displayed
+(put 'su-auto-save-mode-lighter 'risky-local-variable t)
+
 (defun su--root-file-name-p (file-name)
   (and (featurep 'tramp)
        (tramp-tramp-file-p file-name)
@@ -213,14 +222,7 @@
                   (apply old-aff args)))))
     (apply old-fun args)))
 
-(defvar root-save-mode-lighter
-  (list " " (propertize "root" 'face 'tty-menu-selected-face))
-  "The mode line lighter for root-save-mode.")
-
-;; Required for the face to be displayed
-(put 'root-save-mode-lighter 'risky-local-variable t)
-
-(defun root-save-mode/before-save ()
+(defun su--before-save-hook ()
   "Switch the visiting file to a TRAMP su or sudo name if applicable"
   (when (and (buffer-modified-p)
              (not (su--root-file-name-p buffer-file-name))
@@ -228,16 +230,19 @@
                  (yes-or-no-p "File is not writable. Save with root? ")))
     (let ((change-major-mode-with-file-name nil))
       (set-visited-file-name (su--make-root-file-name buffer-file-name) t t))
-    (remove-hook 'before-save-hook #'root-save-mode/before-save t)))
+    (remove-hook 'before-save-hook #'su--before-save-hook t)))
 
 (defun su--nadvice/find-file-noselect (old-fun &rest args)
   (cl-letf* ((old-fwp (symbol-function #'file-writable-p))
              ((symbol-function #'file-writable-p)
               (lambda (&rest iargs)
-                (or (member 'root-save-mode first-change-hook)
-                    (bound-and-true-p root-save-mode)
+                (or (member 'su-auto-save-mode first-change-hook)
+                    (bound-and-true-p su-auto-save-mode)
                     (apply old-fwp iargs)))))
     (apply old-fun args)))
+
+(defun su--notify-insufficient-permissions ()
+  (message "Modifications will require a change of permissions to save."))
 
 (defun su--edit-file-as-root-maybe ()
   "Find file as root if necessary."
@@ -248,26 +253,26 @@
              (not (su--root-file-name-p buffer-file-name)))
     
     (setq buffer-read-only nil)
-    (add-hook 'first-change-hook #'root-save-mode nil t)
-    (run-with-idle-timer
-     0.5 nil
-     (lambda ()
-       (message "Modifications will require root permissions to save.")))))
+    (add-hook 'first-change-hook #'su-auto-save-mode nil t)
+    ;; This is kind of a hack, since I can't guarantee that this
+    ;; message will be displayed last, so I just display it with a
+    ;; delay.
+    (run-with-idle-timer 0.5 nil #'su--edit-file-as-root-maybe)))
 
-(define-minor-mode root-save-mode
+(define-minor-mode su-auto-save-mode
   "Automatically save buffer as root"
-  :lighter root-save-mode-lighter
-  (if root-save-mode
-      ;; Ensure that root-save-mode is visible by moving it to the
+  :lighter su-auto-save-mode-lighter
+  (if su-auto-save-mode
+      ;; Ensure that su-auto-save-mode is visible by moving it to the
       ;; beginning of the minor mode list
       (progn
-        (let ((root-save-mode-alist-entry
-               (assoc 'root-save-mode minor-mode-alist)))
+        (let ((su-auto-save-mode-alist-entry
+               (assoc 'su-auto-save-mode minor-mode-alist)))
           (setq minor-mode-alist
-                (delete root-save-mode-alist-entry minor-mode-alist))
-          (push root-save-mode-alist-entry minor-mode-alist))
-        (add-hook 'before-save-hook #'root-save-mode/before-save nil t))
-    (remove-hook 'before-save-hook #'root-save-mode/before-save t)))
+                (delete su-auto-save-mode-alist-entry minor-mode-alist))
+          (push su-auto-save-mode-alist-entry minor-mode-alist))
+        (add-hook 'before-save-hook #'su--before-save-hook nil t))
+    (remove-hook 'before-save-hook #'su--before-save-hook t)))
 
 (define-minor-mode su-mode
   "Automatically read and write files as users"
