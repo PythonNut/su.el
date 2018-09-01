@@ -282,7 +282,7 @@
     ;; This is kind of a hack, since I can't guarantee that this
     ;; message will be displayed last, so I just display it with a
     ;; delay.
-    (run-with-idle-timer 0.5 nil #'su--edit-file-as-root-maybe)))
+    (run-with-idle-timer 0.5 nil #'su--notify-insufficient-permissions)))
 
 ;;;###autoload
 (defun su ()
