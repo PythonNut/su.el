@@ -275,7 +275,7 @@
              (not (string= user-login-name
                            (nth 3 (file-attributes buffer-file-name 'string))))
              (not (su--root-file-name-p buffer-file-name)))
-    
+
     (setq buffer-read-only nil)
     (add-hook 'first-change-hook #'su-auto-save-mode nil t)
 
