@@ -320,9 +320,6 @@
 
           (when su-enable-helm-integration
             (with-eval-after-load 'helm-files
-              (eval-when-compile
-                (with-demoted-errors "Load error: %s"
-                  (require 'helm-files)))
               (advice-add 'helm-find-file-or-marked :around
                           #'su--nadvice-make-directory-auto-root))))
 
