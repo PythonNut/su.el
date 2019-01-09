@@ -257,7 +257,7 @@
       (set-visited-file-name (su--make-root-file-name buffer-file-name) t t))
     (remove-hook 'before-save-hook #'su--before-save-hook t)))
 
-(defun su--nadvice/find-file-noselect (old-fun &rest args)
+(defun su--nadvice-find-file-noselect (old-fun &rest args)
   (cl-letf* ((old-fwp (symbol-function #'file-writable-p))
              ((symbol-function #'file-writable-p)
               (lambda (&rest iargs)
@@ -327,7 +327,7 @@
         (when su-auto-write-file
           (add-hook 'find-file-hook #'su--edit-file-as-root-maybe)
           (advice-add 'find-file-noselect :around
-                      #'su--nadvice/find-file-noselect)
+                      #'su--nadvice-find-file-noselect)
 
           (when su-enable-semantic-integration
             (with-eval-after-load 'semantic/fw
@@ -344,7 +344,7 @@
     (advice-remove 'helm-find-file-or-marked
                 #'su--nadvice-make-directory-auto-root)
     (advice-remove 'find-file-noselect
-                #'su--nadvice/find-file-noselect)
+                #'su--nadvice-find-file-noselect)
     (advice-remove 'semantic-find-file-noselect
                 #'su--nadvice-supress-find-file-hook)
     (advice-remove 'find-file-noselect-1
