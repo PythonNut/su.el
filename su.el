@@ -155,14 +155,14 @@
   (or (su--check-passwordless-sudo user)
       (su--check-password-sudo user)))
 
-(defun su--file-name-first-existing-parent (file-path &optional include-self)
-  (catch 'found-existing-directory
+(defun su--file-name-first-matching-parent (file-path predicate &optional include-self)
+  (catch 'found-directory
     (let ((temp-path (if include-self
                          file-path
                        (file-name-directory file-path))))
       (while t
-        (if (file-exists-p temp-path)
-            (throw 'found-existing-directory
+        (if (funcall predicate temp-path)
+            (throw 'found-directory
                    temp-path)
           ;; strip one directory off the path
           (setq temp-path
@@ -177,7 +177,9 @@
          (abs-file-name (expand-file-name file-name))
          (sudo (with-demoted-errors "sudo check failed: %s"
                  (let ((default-directory
-                         (su--file-name-first-existing-parent abs-file-name)))
+                         (su--file-name-first-matching-parent
+                          abs-file-name
+                          #'file-readable-p)))
                    (su--check-sudo user))))
          (su-method (if sudo "sudo" "su")))
     (if (tramp-tramp-file-p abs-file-name)
@@ -231,7 +233,8 @@
         (lambda (dir &optional parents)
           (if (and (not (su--root-file-name-p dir))
                    (not (file-writable-p
-                         (su--file-name-first-existing-parent dir)))
+                         (su--file-name-first-matching-parent dir
+                                                              #'file-exists-p)))
                    (y-or-n-p "Insufficient permissions. Create with root? "))
               (funcall old-md
                        (su--make-root-file-name dir)
