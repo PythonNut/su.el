@@ -295,6 +295,14 @@
   (find-alternate-file (su--make-root-file-name buffer-file-name)))
 
 ;;;###autoload
+(defun su-find-file (filename &optional wildcards)
+  (interactive
+   (let ((default-directory (su--make-root-file-name default-directory)))
+     (find-file-read-args "Find file: "
+                          (confirm-nonexistent-file-or-buffer))))
+  (find-file filename wildcards))
+
+;;;###autoload
 (define-minor-mode su-auto-save-mode
   "Automatically save buffer as root"
   :lighter su-auto-save-mode-lighter
