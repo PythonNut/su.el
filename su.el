@@ -10,13 +10,14 @@
 
 ;;; Commentary:
 
-;; This package implements intelligent helm fuzzy sorting, provided by flx.
+;; This package facilitates automatic privilege escalation for file
+;; permissions using TRAMP.
 
-;; You can install the package by either cloning it yourself, or by doing M-x package-install RET helm-flx RET.
+;; You can install the package by either cloning it yourself, or by doing M-x package-install RET su RET.
 
 ;; After that, you can enable it by putting the following in your init file:
 
-;;     (helm-flx-mode +1)
+;;     (su-mode +1)
 
 ;; See the README for more info.
 
@@ -290,12 +291,13 @@
 
 ;;;###autoload
 (defun su ()
-  "Find file as root"
+  "Open the current file as root"
   (interactive)
   (find-alternate-file (su--make-root-file-name buffer-file-name)))
 
 ;;;###autoload
 (defun su-find-file (filename &optional wildcards)
+  "Find file as root"
   (interactive
    (let ((default-directory (su--make-root-file-name default-directory)))
      (find-file-read-args "Find file: "
