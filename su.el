@@ -33,59 +33,59 @@
   :prefix "su-")
 
 (defcustom su-auto-make-directory t
-  "Automatically become other users to create directories"
+  "Automatically become other users to create directories."
   :type 'boolean
   :group 'su)
 
 (defcustom su-auto-write-file t
-  "Automatically become other users to write files"
+  "Automatically become other users to write files."
   :type 'boolean
   :group 'su)
 
 (defcustom su-auto-read-file t
-  "Automatically become other users to read files"
+  "Automatically become other users to read files."
   :type 'boolean
   :group 'su)
 
 (defcustom su-enable-helm-integration t
-  "Enable integration with helm"
+  "Enable integration with helm."
   :type 'boolean
   :group 'su)
 
 (defcustom su-enable-semantic-integration t
-  "Enable integration with semantic"
+  "Enable integration with semantic."
   :type 'boolean
   :group 'su)
 
 (defcustom su-auto-save-mode-lighter
   (list " " (propertize "root" 'face 'tty-menu-selected-face))
-  "The mode line lighter for su-auto-save-mode."
+  "The mode line lighter for function `su-auto-save-mode'."
   :type 'list
   :group 'su)
 
 ;; Required for the face to be displayed
 (put 'su-auto-save-mode-lighter 'risky-local-variable t)
 
-(defun su--root-file-name-p (file-name)
-  (and (featurep 'tramp)
-       (tramp-tramp-file-p file-name)
-       (with-parsed-tramp-file-name file-name parsed
-         (when parsed-user
-           (string= "root" (substring-no-properties parsed-user))))))
-
-(defun su--get-current-user (file-name)
+(defun su--get-current-user (path)
+  "Get the user currently opening `PATH'."
   (if (and (featurep 'tramp)
-       (tramp-tramp-file-p file-name))
-      (with-parsed-tramp-file-name file-name parsed
-         (if parsed-user
-             (substring-no-properties parsed-user)
-           user-login-name))
+           (tramp-tramp-file-p path))
+      (with-parsed-tramp-file-name path parsed
+        (if parsed-user
+            (substring-no-properties parsed-user)
+          user-login-name))
     user-login-name))
 
+(defun su--root-file-name-p (path)
+  "Test whether this PATH is already being opened by root."
+  (string= (su--get-current-user path) "root"))
+
 (defun su--tramp-get-method-parameter (method param)
+  "Helper to get a PARAM for a METHOD in `tramp-methods'."
   (assoc param (assoc method tramp-methods)))
 
 (defun su--tramp-corresponding-inline-method (method)
+  "Calculate the inline-method which is most similar to METHOD."
   (let* ((login-program
           (su--tramp-get-method-parameter method 'tramp-login-program))
          (login-args
@@ -123,6 +123,7 @@
           "sshx"))))
 
 (defun su--check-passwordless-sudo (&optional user)
+  "Determine if USER can use sudo without a password."
   (let (process-file-side-effects)
     (= (apply #'process-file
               "sudo"
@@ -136,6 +137,7 @@
        0)))
 
 (defun su--check-password-sudo (&optional user)
+  "Determine if USER can use sudo with a password."
   (let ((prompt "emacs-su-prompt")
         process-file-side-effects)
     (string-match-p
@@ -153,10 +155,16 @@
                   (list "-u" user))))))))
 
 (defun su--check-sudo (&optional user)
+  "Determine if USER can use sudo."
   (or (su--check-passwordless-sudo user)
       (su--check-password-sudo user)))
 
 (defun su--file-name-first-matching-parent (file-path predicate &optional include-self)
+  "Return the first parent of FILE-PATH for which (PREDICATE parent) is truthy.
+
+If INCLUDE-SELF is set, then include FILE-PATH path in list of
+potential matches. (i.e. the \"parent\" relationship is not
+proper.)"
   (catch 'found-directory
     (let ((temp-path (if include-self
                          file-path
@@ -173,6 +181,10 @@
                                         (expand-file-name temp-path))))))))))
 
 (defun su--make-root-file-name (file-name &optional user)
+  "Calculate the TRAMP path with escalated privileges for FILE-NAME.
+
+Optional argument USER provides a user whose identity to assume
+via TRAMP."
   (require 'tramp)
   (let* ((target-user (or user "root"))
          (abs-file-name (expand-file-name file-name))
@@ -214,6 +226,11 @@
                                     abs-file-name)))))
 
 (defun su--nadvice-find-file-noselect-1 (old-fun buf filename &rest args)
+  "Find-file-noselect with privilege escalation if necessary.
+Argument OLD-FUN Should be `find-file-noselect-1'.
+Argument BUF The buffer to read FILENAME into.
+Argument FILENAME The filename to open.
+Optional argument ARGS Any other args to `find-file-noselect-1'."
   (condition-case err
       (apply old-fun buf filename args)
     (file-error
@@ -228,6 +245,9 @@
        (signal (car err) (cdr err))))))
 
 (defun su--nadvice-make-directory-auto-root (old-fun &rest args)
+  "Make-directory with privilege escalation if necessary.
+Argument OLD-FUN Should be `make-directory'.
+Optional argument ARGS Any other args to `make-directory'."
   (cl-letf*
       ((old-md (symbol-function #'make-directory))
        ((symbol-function #'make-directory)
@@ -244,6 +264,8 @@
     (apply old-fun args)))
 
 (defun su--nadvice-supress-find-file-hook (old-fun &rest args)
+  "Prevent `find-file-hook' from being fired during the execution of OLD-FUN.
+Optional argument ARGS Any other args to OLD-FUN."
   (cl-letf* ((old-aff (symbol-function #'after-find-file))
              ((symbol-function #'after-find-file)
               (lambda (&rest args)
@@ -252,7 +274,7 @@
     (apply old-fun args)))
 
 (defun su--before-save-hook ()
-  "Switch the visiting file to a TRAMP su or sudo name if applicable"
+  "Switch the visiting file to a TRAMP path if needed to perform the save."
   (when (and (buffer-modified-p)
              (not (su--root-file-name-p buffer-file-name))
              (or (not (su--check-passwordless-sudo))
@@ -262,6 +284,9 @@
     (remove-hook 'before-save-hook #'su--before-save-hook t)))
 
 (defun su--nadvice-find-file-noselect (old-fun &rest args)
+  "Fool `find-file-noselect' into thinking files are writable.
+Argument OLD-FUN Should be `find-file-noselect'.
+Optional argument ARGS Any other args to `find-file-noselect'."
   (cl-letf* ((old-fwp (symbol-function #'file-writable-p))
              ((symbol-function #'file-writable-p)
               (lambda (&rest iargs)
@@ -271,6 +296,7 @@
     (apply old-fun args)))
 
 (defun su--notify-insufficient-permissions ()
+  "Notify the user that privilege escalation will be required to save."
   (message "Modifications will require a change of permissions to save."))
 
 (defun su--edit-file-as-root-maybe ()
@@ -291,13 +317,14 @@
 
 ;;;###autoload
 (defun su ()
-  "Open the current file as root"
+  "Open the current file as root."
   (interactive)
   (find-alternate-file (su--make-root-file-name buffer-file-name)))
 
 ;;;###autoload
 (defun su-find-file (filename &optional wildcards)
-  "Find file as root"
+  "Find FILENAME as root.
+Optional argument WILDCARDS Wildcards to pass to `find-file'."
   (interactive
    (let ((default-directory (su--make-root-file-name default-directory)))
      (find-file-read-args "Find file: "
