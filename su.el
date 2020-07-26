@@ -251,16 +251,16 @@ Optional argument ARGS Any other args to `make-directory'."
   (cl-letf*
       ((old-md (symbol-function #'make-directory))
        ((symbol-function #'make-directory)
-        (lambda (dir &optional parents)
+        (lambda (dir &rest args)
           (if (and (not (su--root-file-name-p dir))
                    (not (file-writable-p
                          (su--file-name-first-matching-parent dir
                                                               #'file-exists-p)))
                    (y-or-n-p "Insufficient permissions. Create with root? "))
-              (funcall old-md
-                       (su--make-root-file-name dir)
-                       parents)
-            (funcall old-md dir parents)))))
+              (apply old-md
+                     (su--make-root-file-name dir)
+                     args)
+            (apply old-md dir args)))))
     (apply old-fun args)))
 
 (defun su--nadvice-supress-find-file-hook (old-fun &rest args)
