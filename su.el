@@ -5,7 +5,7 @@
 ;; Author: PythonNut <pythonnut@pythonnut.com>
 ;; Keywords: convenience, helm, fuzzy, flx
 ;; Version: 20151013
-;; URL: https://github.com/PythonNut/helm-flx
+;; URL: https://github.com/PythonNut/su.el
 ;; Package-Requires: ((emacs "26.1"))
 
 ;;; Commentary:
