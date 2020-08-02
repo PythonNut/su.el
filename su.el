@@ -5,7 +5,7 @@
 ;; Author: PythonNut <pythonnut@pythonnut.com>
 ;; SPDX-License-Identifier: MIT
 ;; Keywords: convenience, helm, fuzzy, flx
-;; Version: 20151013
+;; Version: 20200802
 ;; URL: https://github.com/PythonNut/su.el
 ;; Package-Requires: ((emacs "26.1"))
 
