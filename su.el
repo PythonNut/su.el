@@ -22,10 +22,16 @@
 ;; See the README for more info.
 
 ;;; Code:
+(require 'cl-lib)
+
 (eval-when-compile
   (with-demoted-errors "Byte-compile: %s"
     (require 'tramp)
     (require 'nadvice)))
+
+(declare-function tramp-tramp-file-p "tramp.el" t t)
+(declare-function tramp-dissect-file-name "tramp.el" t t)
+(declare-function tramp-make-tramp-file-name "tramp.el" t t)
 
 (defgroup su nil
   "Automatically read and write files as users"
