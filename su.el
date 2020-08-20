@@ -5,7 +5,7 @@
 ;; Author: PythonNut <pythonnut@pythonnut.com>
 ;; SPDX-License-Identifier: MIT
 ;; Keywords: convenience, helm, fuzzy, flx
-;; Version: 20200802
+;; Version: 20200819
 ;; URL: https://github.com/PythonNut/su.el
 ;; Package-Requires: ((emacs "26.1"))
 
@@ -373,22 +373,26 @@ Optional argument WILDCARDS Wildcards to pass to `find-file'."
     (advice-remove 'find-file-noselect-1
                    #'su--nadvice-find-file-noselect-1)))
 
+;;;###autoload
 (define-minor-mode su-helm-integration-mode
   "Enable su-mode integration with helm."
   :init-value nil
   :group 'su
   :global t
+  (require 'helm-files)
   (if su-helm-integration-mode
       (advice-add 'helm-find-file-or-marked :around
                   #'su--nadvice-make-directory-auto-root)
     (advice-remove 'helm-find-file-or-marked
                    #'su--nadvice-make-directory-auto-root)))
 
+;;;###autoload
 (define-minor-mode su-semantic-integration-mode
   "Enable su-mode integration with semantic."
   :init-value nil
   :group 'su
   :global t
+  (require 'semantic)
   (if su-semantic-integration-mode
       (advice-add 'semantic-find-file-noselect :around
                   #'su--nadvice-supress-find-file-hook)
