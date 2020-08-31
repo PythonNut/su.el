@@ -1,11 +1,21 @@
 # `su.el`
 
+[![MELPA](https://melpa.org/packages/su-badge.svg)](https://melpa.org/#/su)
+
 This package facilitates automatic privilege escalation for file permissions using TRAMP.
 You can install the package by either cloning it yourself, or by doing <kbd>M-x</kbd> `package-install` <kbd>RET</kbd> `su` <kbd>RET</kbd>.
 After that, you can enable it by putting the following in your init file:
 
 ```emacs
 (su-mode +1)
+
+# If you desire integration with helm
+(with-eval-after-load 'helm-files
+  (su-helm-integration-mode +1))
+  
+# If you desire integration with semantic
+(with-eval-after-load 'semantic/fw
+  (su-semantic-integration-mode +1))
 ```
 
 When `su-mode` is enabled, files you do not have permission to read but not write will remain editable (i.e. `buffer-read-only`  will be `nil`) and `su-mode` will indicate in the modeline that any changes made will require privilege escalation to save.
@@ -21,15 +31,3 @@ In particular:
 1. It can use either the `su` or `sudo` methods to switch users and will automatically detect which one to use.
 2. It works even if you are already using TRAMP (e.g. for editing a remote file) by adding another hop.
 3. It may even work with your custom TRAMP methods, although this cannot be guaranteed.
-
-## Example setup
-
-```emacs
-(su-mode +1)
-(with-eval-after-load 'helm-files
-  (su-helm-integration-mode +1))
-(with-eval-after-load 'semantic/fw
-  (su-semantic-integration-mode +1))
-```
-
-Note: configuration variables `su-enable-helm-integration` and `su-enable-semantic-integration` have both been replaced with minor-modes shown above. They are _not_ enabled by default, but you should enable them yourself as shown above if you use either of these packages.
