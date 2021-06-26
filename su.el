@@ -1,4 +1,4 @@
-;;; su.el --- Automatically read and write files as other users -*- lexical-binding: t -*-
+;;; su.el --- Automatically read and write files using su or sudo -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2018 PythonNut
 
