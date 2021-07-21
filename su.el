@@ -66,6 +66,12 @@
   :type 'list
   :group 'su)
 
+(defcustom su-sudo-method "sudo"
+  "TRAMP method to use to edit with sudo."
+  :type '(choice (const :tag "sudo" "sudo")
+                 (const :tag "sudoedit" "sudoedit"))
+  :group 'su)
+
 ;; Required for the face to be displayed
 (put 'su-auto-save-mode-lighter 'risky-local-variable t)
 
@@ -197,7 +203,7 @@ via TRAMP."
                           abs-file-name
                           #'file-readable-p)))
                    (su--check-sudo user))))
-         (su-method (if sudo "sudo" "su")))
+         (su-method (if sudo su-sudo-method "su")))
     (if (tramp-tramp-file-p abs-file-name)
         (with-parsed-tramp-file-name abs-file-name parsed
           (if (string= parsed-user target-user)
