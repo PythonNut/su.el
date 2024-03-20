@@ -328,7 +328,7 @@ Optional argument ARGS Any other args to `find-file-noselect'."
 (defun su ()
   "Open the current file as root."
   (interactive)
-  (find-alternate-file (su--make-root-file-name buffer-file-name)))
+  (find-alternate-file (su--make-root-file-name (or buffer-file-name default-directory))))
 
 ;;;###autoload
 (defun su-find-file (filename &optional wildcards)
