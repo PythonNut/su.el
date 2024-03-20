@@ -316,6 +316,8 @@ Optional argument ARGS Any other args to `find-file-noselect'."
                            (nth 3 (file-attributes buffer-file-name 'string))))
              (not (su--root-file-name-p buffer-file-name)))
 
+    (when view-mode
+      (view-mode -1))
     (setq buffer-read-only nil)
     (add-hook 'first-change-hook #'su-auto-save-mode nil t)
 
